@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ game.title }} - BoardWiki</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Вернуться к списку</a>
+        
+        <div class="g-detail">
+            <div class="g-detail-header">
+                <img src="/static/images/{{ game.image }}" alt="{{ game.title }}">
+                <div>
+                    <h1 style="color: #2d3748; text-align: left; margin: 0 0 15px;">{{ game.title }}</h1>
+                    <div class="g-players" style="font-size: 1rem; padding: 8px 18px;">👥 Количество игроков: {{ game.players }}</div>
+                    <div class="game-tags">
+                        {% for tag in game.tags.all %}
+                        <a href="/?tag={{ tag.name }}" class="game-tag">{{ tag.name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <h3>📖 Описание</h3>
+            <div class="g-info-block">
+                <p>{{ game.description }}</p>
+            </div>
+            
+            <h3>📜 Правила</h3>
+            <div class="g-info-block">
+                <p>{{ game.rules }}</p>
+            </div>
+            
+            <hr>
+            
+            <h3>💬 Обсуждение</h3>
+            
+            {% for comment in game.comments.all %}
+                <div class="comment">
+                    <div class="comment-author">{{ comment.author }}</div>
+                    <div class="comment-text">{{ comment.text }}</div>
+                </div>
+            {% empty %}
+                <p style="color: #718096; text-align: center; padding: 20px;">Пока нет комментариев. Будьте первым!</p>
+            {% endfor %}
+            
+            <hr>
+            
+            <h3>✍️ Добавить комментарий</h3>
+            
+            {% if errors %}
+            <div class="form-errors">
+                {% for error in errors %}
+                <div class="form-error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <form method="post" class="comment-form">
+                {% csrf_token %}
+                <input type="text" name="website" style="display:none">
+                <input type="text" name="author" placeholder="Ваше имя" required minlength="2" maxlength="30" value="{{ old_author|default:'' }}">
+                <textarea name="text" placeholder="Напишите ваш комментарий..." required minlength="5" maxlength="90">{{ old_text|default:'' }}</textarea>
+                <button type="submit" class="btn">Отправить комментарий</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

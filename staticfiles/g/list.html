@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настольные игры - BoardWiki</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Настолки</h1>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 Поиск по названию игры..." class="search-input">
+            <button class="filter-btn" id="filterBtn">🏷️ Теги</button>
+        </div>
+
+        <!-- Фильтр тегов -->
+        <div class="filter-dropdown" id="filterDropdown">
+            <div class="filter-header">
+                <h4>Выберите теги</h4>
+                <button class="close-filter" id="closeFilter">×</button>
+            </div>
+            <div class="tags-list">
+                {% for tag in tags %}
+                <label class="tag-checkbox">
+                    <input type="checkbox" value="{{ tag.name }}" class="tag-check">
+                    <span>{{ tag.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div style="display: flex; gap: 1px;">
+                <button class="apply-filter" id="applyFilter">Применить фильтр</button>
+                <button class="reset-filter" id="resetFilter">Сбросить</button>
+            </div>
+        </div>
+        <div class="filter-overlay" id="filterOverlay"></div>
+        
+        <div class="g-grid">
+            {% for game in games %}
+                <div class="g-card" data-tags="{% for tag in game.tags.all %}{{ tag.name }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                    <img src="/static/images/{{ game.image }}" alt="{{ game.title }}">
+                    <div class="g-card-content">
+                        <h2>
+                            <a href="/g/{{ game.id }}/">{{ game.title }}</a>
+                        </h2>
+                        <div class="g-players">👥 Игроков: {{ game.players }}</div>
+                        <p class="g-description">{{ game.description|truncatewords:20 }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const gameCards = document.querySelectorAll('.g-card');
+        const filterBtn = document.getElementById('filterBtn');
+        const filterDropdown = document.getElementById('filterDropdown');
+        const filterOverlay = document.getElementById('filterOverlay');
+        const closeFilter = document.getElementById('closeFilter');
+        const applyFilter = document.getElementById('applyFilter');
+        const resetFilter = document.getElementById('resetFilter');
+        const tagCheckboxes = document.querySelectorAll('.tag-check');
+
+        let selectedTags = new Set();
+        let searchTerm = '';
+
+        // Открыть/закрыть фильтр
+        filterBtn.addEventListener('click', () => {
+            filterDropdown.classList.toggle('active');
+            filterOverlay.classList.toggle('active');
+        });
+
+        closeFilter.addEventListener('click', closeFilterMenu);
+        filterOverlay.addEventListener('click', closeFilterMenu);
+
+        function closeFilterMenu() {
+            filterDropdown.classList.remove('active');
+            filterOverlay.classList.remove('active');
+        }
+
+        // Обработка чекбоксов тегов
+        tagCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    selectedTags.add(checkbox.value);
+                } else {
+                    selectedTags.delete(checkbox.value);
+                }
+                updateUrl();
+            });
+        });
+
+        // Применить фильтр
+        applyFilter.addEventListener('click', () => {
+            closeFilterMenu();
+            applyFilters();
+            updateUrl();
+        });
+
+        // Сбросить фильтры
+        resetFilter.addEventListener('click', () => {
+            tagCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            selectedTags.clear();
+            closeFilterMenu();
+            applyFilters();
+            updateUrl();
+        });
+
+        // Обновить URL в адресной строке
+        function updateUrl() {
+            const url = new URL(window.location);
+            
+            // Удаляем все старые параметры
+            url.searchParams.delete('tag');
+            url.searchParams.delete('tags');
+            
+            if (selectedTags.size > 0) {
+                url.searchParams.set('tags', Array.from(selectedTags).join(','));
+            }
+            
+            window.history.replaceState({}, '', url);
+        }
+
+        // Основная функция фильтрации
+        function applyFilters() {
+            gameCards.forEach(card => {
+                const title = card.querySelector('h2 a').textContent.toLowerCase();
+                const cardTags = card.dataset.tags ? card.dataset.tags.split(',') : [];
+
+                // Проверка по названию
+                const matchesSearch = title.includes(searchTerm);
+
+                // Проверка по тегам
+                let matchesTags = true;
+                if (selectedTags.size > 0) {
+                    matchesTags = Array.from(selectedTags).some(tag => cardTags.includes(tag));
+                }
+
+                // Показать карточку только если оба условия выполнены
+                if (matchesSearch && matchesTags) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Обработчик поиска
+        searchInput.addEventListener('input', function() {
+            searchTerm = this.value.toLowerCase().trim();
+            applyFilters();
+        });
+
+
+        // Автоматически применить теги из параметра URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoTags = urlParams.get('tags');
+        if (autoTags) {
+            const tagsList = autoTags.split(',');
+            tagCheckboxes.forEach(checkbox => {
+                if (tagsList.includes(checkbox.value)) {
+                    checkbox.checked = true;
+                    selectedTags.add(checkbox.value);
+                }
+            });
+            applyFilters();
+        }
+        // Поддержка старого формата с одним тегом
+        const oldAutoTag = urlParams.get('tag');
+        if (oldAutoTag) {
+            tagCheckboxes.forEach(checkbox => {
+                if (checkbox.value === oldAutoTag) {
+                    checkbox.checked = true;
+                    selectedTags.add(oldAutoTag);
+                }
+            });
+            applyFilters();
+        }
+
+        // Фокус на поле поиска при загрузке страницы
+        searchInput.focus();
+    </script>
+</body>
+</html>
