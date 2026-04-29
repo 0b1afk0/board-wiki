@@ -502,7 +502,7 @@ hr {
 }
 
 .error-text {
-    color: white;
+    color: #2d3748;
     font-size: 1.1rem;
     margin-bottom: 40px;
     opacity: 0.9;
