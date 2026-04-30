@@ -125,5 +125,5 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'templates/images/'
+MEDIA_URL = 'static/images/'
 MEDIA_ROOT = BASE_DIR / 'templates' / 'images'
